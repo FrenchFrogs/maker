@@ -1,0 +1,30 @@
+{
+    "name": "frenchfrogs/maker",
+    "description": "Helper to make code easily",
+    "type": "library",
+    "source": {
+        "url": "git@github.com:FrenchFrogs/maker.git",
+        "type": "git",
+        "reference": "origin/master"
+    },
+    "homepage": "https://github.com/FrenchFrogs/maker",
+    "licence": "GPL-3.0+",
+    "authors": [
+        {
+            "name": "Julien Houvion",
+            "email": "cotcotquedec@gmail.com",
+            "homepage": "https://github.com/cotcotquedec",
+            "role": "Project Manager"
+        }
+    ],
+    "require": {
+	    "frenchfrogs/framework" : ">=1.8.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "FrenchFrogs\\Maker\\": "src/",
+            "FrenchFrogs\\Models\\": "src/Models/"
+        }
+    },
+    "minimum-stability": "dev"
+}
