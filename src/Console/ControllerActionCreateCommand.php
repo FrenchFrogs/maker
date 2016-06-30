@@ -166,16 +166,18 @@ class ControllerActionCreateCommand extends Command
 
         // Récupération du controller à mettre à jour
         $controller = ucfirst(camel_case($controller . '_controller'));
-        $controller = app_path('Http/Controllers/') . $controller . '.php';
-        $class = PhpClass::fromFile($controller)->setMethod($method);
+        $controller  = new \ReflectionClass('App\\Http\\Controllers\\'.$controller);
+
+        $class = PhpClass::fromReflection($controller)->setMethod($method);
 
         // Génration du code
         $generator = new CodeGenerator();
         $class = '<?php ' . $generator->generate($class);
 
-        // inscription du code dans la classe
-        file_put_contents($controller, $class);
 
-        $this->info('Action generated dans le fichier : ' . $controller);
+        // inscription du code dans la classe
+        file_put_contents($controller->getFileName(), $class);
+
+        $this->info('Action generated dans le fichier : ' . $controller->getFileName());
     }
 }
