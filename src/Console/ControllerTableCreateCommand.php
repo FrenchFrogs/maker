@@ -69,6 +69,7 @@ class ControllerTableCreateCommand extends Command
         $controller  = new \ReflectionClass('App\\Http\\Controllers\\'.$controller);
 
         $class = PhpClass::fromReflection($controller)->setMethod($method);
+        $class->setParentClassName('Controller');// fix la gestion des namespaec pour la parent class
 
         // Génration du code
         $generator = new CodeGenerator();
