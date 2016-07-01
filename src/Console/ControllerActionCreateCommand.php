@@ -21,7 +21,8 @@ class ControllerActionCreateCommand extends Command
                              {method : Méthode pour l\'action (post, get, etc...)}
                              {name : Nom de l\action}
                              {--acl= : Permission pour l\'accès}
-                             {--params= : Paramètre pour l\'action}';
+                             {--params= : Paramètre pour l\'action}
+                             {--template=default : Template utilisé pour le body de la méthode}';
 
     /**
      * The console command description.
@@ -29,6 +30,41 @@ class ControllerActionCreateCommand extends Command
      * @var string
      */
     protected $description = "Création d'une action pour le controller";
+
+
+    /**
+     * Params
+     *
+     * @var
+     */
+    protected $params;
+
+
+    /**
+     * Setter for $params
+     *
+     * @param array $params
+     * @return $this
+     */
+    public function setParams(array $params)
+    {
+        $this->params = $params;
+        return $this;
+    }
+
+    /**
+     * Getter for $params
+     *
+     * @return mixed
+     */
+    public function getParams()
+    {
+        if (!isset($this->params)) {
+            $this->extractParams();
+        }
+
+        return $this->params;
+    }
 
     /**
      * Create a new command instance.
@@ -40,23 +76,25 @@ class ControllerActionCreateCommand extends Command
         parent::__construct();
     }
 
+
     /**
-     * Execute the console command.
+     * Extract params
      *
-     * @return mixed
+     * @return $this
+     * @throws \Exception
      */
-    public function handle()
+    protected function extractParams()
     {
-
-        $controller = $this->argument('controller');
-
-        // Gestion des paramètres
-        $params = [];
+        // Recuperation des paramètres de la commande
         $p = $this->option('params');
-        if($p) {
 
-            // recupération des paramètres
-            foreach( explode('#', $p) as $param) {
+        // INITALISATION
+        $params = [];
+
+        if (!empty($p)) {
+
+            // EXPLODE PARAMS
+            foreach (explode('#', $p) as $param) {
                 $parts = explode(';', $param);
 
                 // paramètres
@@ -73,26 +111,25 @@ class ControllerActionCreateCommand extends Command
                 // initialisation du container
                 $params[$name] = [];
 
-                // Class
+                // TYPE - CLASS
                 if (isset($match['type'])) {
                     $params[$name]['type'] = $match['type'];
                 }
 
-                // Valeur par default
+                // DEFAULT VALUE
                 if (isset($match['value'])) {
                     $params[$name]['value'] = $match['value'];
                 }
 
-                // validateur
-                if($validator = array_shift($parts)) {
+                // VALIDATOR
+                if ($validator = array_shift($parts)) {
                     if (!empty($validator)) {
                         $params[$name]['validator'] = $validator;
                     }
                 }
 
-
-                // filter
-                if($filter = array_shift($parts)) {
+                // FILTER
+                if ($filter = array_shift($parts)) {
                     if (!empty($filter)) {
                         $params[$name]['filter'] = $filter;
                     }
@@ -100,13 +137,21 @@ class ControllerActionCreateCommand extends Command
             }
         }
 
-        // création de la méthode
-        $method = camel_case($this->argument('method') .  '_' . $this->argument('name'));
-        $method = PhpMethod::create($method);
+        $this->setParams($params);
 
+        return $this;
+    }
 
-        // Inscription des paramètre
-        foreach ($params as $name => $info) {
+    /**
+     * Génération des paramètres de la méthode
+     *
+     * @param PhpMethod $method
+     * @return $this
+     */
+    protected function generateParams(PhpMethod $method)
+    {
+        // PARAMS
+        foreach ($this->getParams() as $name => $info) {
             $param = PhpParameter::create($name);
 
             if (isset($info['type'])) {
@@ -123,12 +168,25 @@ class ControllerActionCreateCommand extends Command
             $method->addParameter($param);
         }
 
-        // Gestion du body
+        return $this;
+    }
+
+
+    /**
+     * Generate ACL block
+     *
+     */
+    protected function generateAcl()
+    {
         $body = '';
 
-        // Ruler
+        $ruler = [];
+        $acl = $this->option('acl') ?: 'null';
+        $ruler[] = $acl;
+
+        // RULER
         $validator = $filter = [];
-        foreach ($params as $name => $info) {
+        foreach ($this->getParams() as $name => $info) {
             $validator[] = sprintf("['%s' => '%s']", $name, $info['validator']);
             if (!empty($info['filter'])) {
                 $filter[] = sprintf("['%s' => f('%s', \$%s)]", $name, $info['filter'], $name);
@@ -137,10 +195,7 @@ class ControllerActionCreateCommand extends Command
             }
         }
 
-        $ruler = [];
-        $acl = $this->option('acl') ?: 'null';
-        $ruler[] = $acl;
-
+        // VALIDATOR
         if (!empty($validator)) {
             $validator = implode(',',$validator);
             $filter = implode(',',$filter);
@@ -148,33 +203,97 @@ class ControllerActionCreateCommand extends Command
             $ruler[] = $filter;
         }
 
+        $body .= str_repeat(PHP_EOL, 2);
+
+        // RENDER
         if ($acl || $validator) {
+            $body .= '//RULER' . PHP_EOL;
             $body .= sprintf("\\ruler()->check(%s);", PHP_EOL . implode(',' . PHP_EOL, $ruler) . PHP_EOL);
+            $body .= str_repeat(PHP_EOL, 2);
         }
 
-        // block de commentaire
+        return $body;
+    }
+
+
+    /**
+     * Generation du body pour le template "default"
+     *
+     * @return string
+     */
+    protected function templateDefault()
+    {
+        return "return basic('__TITLE__', '__CONTENT__');";
+    }
+
+    /**
+     * Generation du body pour le template "default"
+     *
+     * @return string
+     */
+    protected function templateForm()
+    {
+        $body = file_get_contents(__DIR__ . '/stubs/actions/form.stub');
+        return $body;
+    }
+
+    /**
+     * Generation du body pour le template "default"
+     *
+     * @return string
+     */
+    protected function templateDelete()
+    {
+        $body = file_get_contents(__DIR__ . '/stubs/actions/delete.stub');
+        return $body;
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+
+        $controller = $this->argument('controller');
+
+        // création de la méthode
+        $method = camel_case($this->argument('method') .  '_' . $this->argument('name'));
+        $method = PhpMethod::create($method);
+
+        // PARAMS
+        $this->generateParams($method);
+
+        // BODY
+        $body = '';
+        $body .= $this->generateAcl();
+
+        // TEMPLATE
+        $template = camel_case('template_' . $this->option('template'));
+        if (!method_exists($this, $template)) {
+            exc('Impossible de trouver le template : ' . $template);
+        }
+        $body .= call_user_func([$this, $template]);
+        $method->setBody($body);
+
+        // DOCKBOCK
         $dockblock = new Docblock();
         $dockblock->appendTag(TagFactory::create('name', 'Artisan'));
         $dockblock->appendTag(TagFactory::create('see', 'php artisan ffmake:action'));
         $dockblock->appendTag(TagFactory::create('generated', Carbon::now()));
         $method->setDocblock($dockblock);
 
-
-        // Gestion du retour
-        $body .= str_repeat(PHP_EOL, 3) . "return basic('_TITRE_', '_CONTENT_');";
-        $method->setBody($body);
-
-        // Récupération du controller à mettre à jour
+        // CONTROLLER
         $controller = ucfirst(camel_case($controller . '_controller'));
         $controller  = new \ReflectionClass('App\\Http\\Controllers\\'.$controller);
 
         $class = PhpClass::fromReflection($controller)->setMethod($method);
         $class->setParentClassName('Controller');// fix la gestion des namespaec pour la parent class
 
-        // Génration du code
+        // GENERATION
         $generator = new CodeGenerator();
         $class = '<?php ' . $generator->generate($class);
-
 
         // inscription du code dans la classe
         file_put_contents($controller->getFileName(), $class);
