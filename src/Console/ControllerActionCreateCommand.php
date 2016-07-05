@@ -189,7 +189,7 @@ class ControllerActionCreateCommand extends Command
         foreach ($this->getParams() as $name => $info) {
             $validator[] = sprintf("['%s' => '%s']", $name, $info['validator']);
             if (!empty($info['filter'])) {
-                $filter[] = sprintf("['%s' => f('%s', \$%s)]", $name, $info['filter'], $name);
+                $filter[] = sprintf("['%s' => f(\$%s, '%s')]", $name, $name, $info['filter']);
             } else {
                 $filter[]=  sprintf("['%s' => \$%s]", $name, $name);
             }
