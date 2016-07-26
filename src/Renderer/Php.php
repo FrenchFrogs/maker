@@ -1,7 +1,9 @@
 <?php namespace FrenchFrogs\Maker\Renderer;
 use FrenchFrogs\Maker\Docblock;
 use FrenchFrogs\Maker\Maker;
+use FrenchFrogs\Maker\Method;
 use FrenchFrogs\Maker\Modifier;
+use FrenchFrogs\Maker\Parameter;
 use FrenchFrogs\Maker\Property;
 use FrenchFrogs\Renderer\Renderer;
 use phpDocumentor\Reflection\DocBlock\Serializer;
@@ -21,6 +23,7 @@ class Php extends Renderer
         'docblock',
         'modifier',
         'value',
+        'method'
     ];
 
     /**
@@ -60,16 +63,24 @@ class Php extends Renderer
     public function maker(Maker $maker)
     {
 
-        $class = $maker->getClass();
+        $content = '';
 
-        $content = $properties = '';
+        // CONSTANT
+        foreach ($maker->getConstants() as $name => $value) {
+            $content .= sprintf('%s = %s', $name, $this->render('value', $value)) . str_repeat(PHP_EOL,2);
+        }
 
         // PROPERTIES
         foreach($maker->getProperties() as $property) {
-            $properties .= $this->render('property', $property) . str_repeat(PHP_EOL,2);
+            $content .= $this->render('property', $property) . str_repeat(PHP_EOL,2);
         }
 
-        $content .= $properties;
+        // METHODS
+        $methods = [];
+        foreach ($maker->getMethods() as $method) {
+            $methods[] = $this->render('method', $method);
+        }
+        $content .= implode(str_repeat(PHP_EOL, 2), $methods);
 
         // rendu globale
         $content = $this->render('maker_class', $maker, $content);
@@ -122,7 +133,7 @@ class Php extends Renderer
 //        $interface = $reflection->getImmediateInterfaces();
 
         $content .= PHP_EOL;
-        $content .= '{' . PHP_EOL . "\t" . str_replace(PHP_EOL, PHP_EOL . "\t", $body) . PHP_EOL . '}';
+        $content .= '{' . PHP_EOL . "\t" . str_replace(PHP_EOL, PHP_EOL . "\t", trim($body)) . PHP_EOL . '}';
 
         return $content;
     }
@@ -154,7 +165,48 @@ class Php extends Renderer
 
 
     /**
+     * Rendu d'une methode
      *
+     * @param Method $method
+     * @return string
+     */
+    public function method(Method $method)
+    {
+
+        $content = '';
+
+        // parameters
+        $parameters = [];
+        foreach ($method->getParameters() as $parameter) {
+
+            $type = $parameter->getType();
+            $name = $parameter->getName();
+            $method->addTagParam($name, $type);
+
+            $p = '';
+
+            if (!is_null($type)) {
+                $p .=  $type . ' ';
+            }
+
+            $p .= '$' . $name;
+
+            if ($parameter->hasDefault()) {
+                $p .= ' = ' . $this->render('value', $parameter->getDefault());
+            }
+
+            $parameters[] = $p;
+        }
+
+        $content .= $this->render('docblock', $method);
+        $content .= sprintf('%sfunction %s(%s)', $this->render('modifier', $method), $method->getName(), implode(', ', $parameters)) . PHP_EOL;
+        $content .= '{' . PHP_EOL . "\t" . str_replace(PHP_EOL, PHP_EOL . "\t", $method->getBody()) . PHP_EOL . '}' . PHP_EOL;
+
+        return $content;
+    }
+
+
+    /**
      *
      * @param $value
      * @return string
@@ -192,7 +244,8 @@ class Php extends Renderer
         $content .= $modifier->isStatic() ? 'static ' : '';
         $content .= $modifier->isPublic() ? 'public ' : '';
         $content .= $modifier->isProtected() ? 'protected ' : '';
-        $content .= $modifier->isPrivate() ? 'private' : '';
+        $content .= $modifier->isPrivate() ? 'private ' : '';
+        $content .= $modifier->isFinal() ? 'final ' : '';
 
         return $content;
     }
@@ -218,7 +271,8 @@ class Php extends Renderer
         $content .= '* ' . str_replace(PHP_EOL, PHP_EOL . '* ', $docblock->getDescription()) . PHP_EOL;
         $content .= '* ' . PHP_EOL;
 
-        foreach ($docblock->getTags() as $name => $value) {
+        foreach ($docblock->getTags() as $tag) {
+            list($name, $value) = $tag;
             $content .= sprintf('* @%s %s', $name, $value) . PHP_EOL;
         }
 

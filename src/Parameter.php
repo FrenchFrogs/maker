@@ -1,6 +1,10 @@
 <?php namespace FrenchFrogs\Maker;
 
 
+use BetterReflection\Reflection\ReflectionParameter;
+use phpDocumentor\Reflection\Types\Array_;
+use phpDocumentor\Reflection\Types\Object_;
+
 class Parameter
 {
 
@@ -8,12 +12,6 @@ class Parameter
      * @var string
      */
     protected $name;
-
-    /**
-     *
-     * @var bool
-     */
-    protected $is_mandatory = false;
 
     /**
      * Default value
@@ -46,6 +44,38 @@ class Parameter
         if (!is_null($type)) {
             $this->setType($type);
         }
+    }
+
+    /**
+     * Factory depuis une reflection
+     *
+     * @param ReflectionParameter $reflection
+     * @return static
+     */
+    static public function fromReflection(ReflectionParameter $reflection)
+    {
+
+        // VALUE
+        $value = $reflection->isDefaultValueAvailable() ? $reflection->getDefaultValue() : Maker::NO_VALUE;
+
+        // TYPE
+        $type = $reflection->getTypeHint();
+
+        // analyse du type
+        if (!is_null($type)) {
+            if ($type instanceof Object_) {
+                $type = strval($type->getFqsen());
+            } elseif($type instanceof Array_) {
+                $type = 'array';
+            } else {
+                exc('Impossible de determiner le type du paramètre : ' . $reflection->getName());
+            }
+        }
+
+        // construction
+        $parameter = new static($reflection->getName(), $value, $type);
+
+        return $parameter;
     }
 
     /**
@@ -139,34 +169,12 @@ class Parameter
     }
 
     /**
-     * Set $is_mandatory to TRUE
-     *
-     * @return $this
-     */
-    public function enableMandatory()
-    {
-        $this->is_mandatory = true;
-        return $this;
-    }
-
-    /**
-     * Set $is_mandatory to FALSE
-     *
-     * @return $this
-     */
-    public function disableMandatory()
-    {
-        $this->is_mandatory = false;
-        return $this;
-    }
-
-    /**
-     * Getter for $is_mandatory
+     * Return TRUE if default valus is set
      *
      * @return bool
      */
-    function isMandatory()
+    public function hasDefault()
     {
-        return $this->is_mandatory;
+        return $this->default != Maker::NO_VALUE;
     }
 }

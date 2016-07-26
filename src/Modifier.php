@@ -6,33 +6,72 @@ trait Modifier
 
 
     /**
-     * If property is private
+     * If is private
      *
      * @var bool
      */
     protected $is_private = false;
 
     /**
-     * If property is protected
+     * If is protected
      *
      * @var bool
      */
     protected $is_protected = false;
 
     /**
-     * If property is public
+     * If is public
      *
      * @var bool
      */
     protected $is_public = false;
 
     /**
-     * If property is static
+     * If is static
      *
      * @var bool
      */
     protected $is_static = false;
 
+    /**
+     * If is final
+     *
+     * @var bool
+     */
+    protected $is_final = false;
+
+    /**
+     * Set $is_private to TRUE
+     *
+     * @return $this
+     */
+    public function enableFinal()
+    {
+        $this->is_final = true;
+        return $this;
+    }
+
+    /**
+     * Set $is_private to FALSE
+     *
+     * @return $this
+     */
+    public function disableFinal()
+    {
+        $this->is_final = false;
+        return $this;
+    }
+
+
+    /**
+     * Getter for $is_final
+     *
+     * @return bool
+     */
+    public function isFinal()
+    {
+        return $this->is_final;
+    }
 
 
     /**

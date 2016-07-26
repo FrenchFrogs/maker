@@ -29,6 +29,12 @@ class Maker
      */
     protected $class;
 
+    /**
+     * Constant de la class
+     *
+     * @var array
+     */
+    protected $constants = [];
 
     /**
      * @var string
@@ -46,6 +52,84 @@ class Maker
      * @var array
      */
     protected $aliases = [];
+
+
+    /**
+     * Getter for $constants
+     *
+     * @return array
+     */
+    public function getConstants()
+    {
+        return $this->constants;
+    }
+
+    /**
+     * Setter for $costants
+     *
+     * @param array $constants
+     */
+    public function setConstants(array $constants)
+    {
+        $this->constants = $constants;
+    }
+
+    /**
+     * add constant to $constant
+     *
+     * @param $name
+     * @param $value
+     * @return $this
+     */
+    public function addConstant($name, $value)
+    {
+        $this->constants[$name] = $value;
+        return $this;
+    }
+
+    /**
+     * Clear $constants
+     *
+     * @return $this
+     */
+    public function clearConstants()
+    {
+        $this->constants = [];
+        return $this;
+    }
+
+    /**
+     * Unset a constant
+     *
+     * @param $name
+     * @return $this
+     */
+    public function removeConstants($name)
+    {
+        unset($this->constants[$name]);
+        return $this;
+    }
+
+    /**
+     * Return TRUE if $name constant is set
+     *
+     * @param $name
+     * @return bool
+     */
+    public function hasConstant($name)
+    {
+        return isset($this->constants[$name]);
+    }
+
+    /**
+     * Getter for $methods
+     *
+     * @return array
+     */
+    public function getMethods()
+    {
+        return $this->methods;
+    }
 
     /**
      * Setter for $aliases
@@ -248,16 +332,17 @@ class Maker
             $this->setParent($parent);
         }
 
+        // CONSTANT
+        $this->setConstants($reflection->getConstants());
+
         // PROPERTIES
         foreach($reflection->getProperties() as $property) {
             $this->addProperty(Property::fromReflection($property));
         }
 
+        // METHODS
         foreach ($reflection->getImmediateMethods() as $method) {
-
-
-            dd($method);
-            
+            $this->addMethod(Method::fromReflection($method));
         }
 
         return $this;
@@ -290,11 +375,15 @@ class Maker
         return $this->properties[$property->getName()];
     }
 
+    /**
+     * @param $name
+     * @param array $params @todo!!!!
+     * @return Method
+     */
     public function addMethod($name, $params = [])
     {
-        $property = $name instanceof Method ?  $name : new Method($name, $params);
-        $this->properties[$property->getName()] = $property;
-        return $this->properties[$property->getName()];
+        $method = $name instanceof Method ?  $name : new Method($name, $params);
+        return $this->methods[$method->getName()] = $method;
     }
 
     /**
@@ -359,5 +448,16 @@ class Maker
         }
 
         return $render;
+    }
+
+    /**
+     * Ecrit dans le fichier le contenu
+     *
+     * @return $this
+     */
+    public function write()
+    {
+        file_put_contents($this->getClass()->getFileName(), '<?php ' . $this->render(), LOCK_EX);
+        return $this;
     }
 }

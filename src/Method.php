@@ -1,4 +1,5 @@
 <?php namespace FrenchFrogs\Maker;
+use BetterReflection\Reflection\ReflectionMethod;
 
 /**
  *
@@ -12,7 +13,7 @@ class Method
     use Modifier;
 
     /**
-     * @var Body
+     * @var string
      */
     protected $body;
 
@@ -31,7 +32,7 @@ class Method
     /**
      * Getter for $parameters
      *
-     * @return array
+     * @return Parameter[]
      */
     public function getParameters()
     {
@@ -50,7 +51,7 @@ class Method
     public function addParameter($name, $default = Maker::NO_VALUE, $type = null)
     {
         $parameter = $name instanceof Parameter ?  $name : new Parameter($name, $default, $type);
-        $this->parameters[$name] = $parameter;
+        $this->parameters[$parameter->getName()] = $parameter;
         return $this;
     }
 
@@ -82,10 +83,48 @@ class Method
      * Method constructor.
      * @param $name
      */
-    public function __construct($name)
+    public function __construct($name, $params = [], $body = '')
     {
         $this->setName($name);
+        //@todo gestion des paramètre
+
+        $this->setBody($body);
     }
+
+    /**
+     *
+     *
+     * @param ReflectionMethod $reflection
+     * @return Method
+     */
+   static public function fromReflection(ReflectionMethod $reflection)
+   {
+       // gestion du type
+//       $type = implode('|', $reflection->getDocBlockTypeStrings());
+//
+
+       // construction
+       $method = new static($reflection->getName(), [], $reflection->getBodyCode());
+
+       // docblock
+       $docblock = new \phpDocumentor\Reflection\DocBlock($reflection->getDocComment());
+       $method->setSummary($docblock->getShortDescription());
+       $method->setDescription($docblock->getLongDescription());
+
+       // gestion des modifiers
+       $reflection->isPrivate() ? $method->enablePrivate() : $method->disablePrivate();
+       $reflection->isProtected() ? $method->enableProtected() : $method->disabledProtected();
+       $reflection->isPublic() ? $method->enablePublic() : $method->disablePublic();
+       $reflection->isStatic() ? $method->enableStatic() : $method->disableStatic();
+       $reflection->isFinal() ? $method->enableFinal() : $method->disableFinal();
+
+
+       foreach ($reflection->getParameters() as $parameter) {
+           $method->addParameter(Parameter::fromReflection($parameter));
+       }
+
+       return $method;
+   }
 
     /**
      * Setter for $body
@@ -95,17 +134,7 @@ class Method
      */
     public function setBody($body)
     {
-
-        if (is_string($body)) {
-            $body = new Body();
-            $body->setContent($body);
-        }
-
-        if (!$body instanceof Body) {
-            throw new \InvalidArgumentException('$body doit être de type string ou Body');
-        }
-
-        $this->setBody($body);
+        $this->body = strval($body);
         return $this;
     }
 
