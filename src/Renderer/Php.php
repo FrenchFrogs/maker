@@ -67,7 +67,7 @@ class Php extends Renderer
 
         // CONSTANT
         foreach ($maker->getConstants() as $name => $value) {
-            $content .= sprintf('%s = %s', $name, $this->render('value', $value)) . str_repeat(PHP_EOL,2);
+            $content .= sprintf('const %s = %s', $name, $this->render('value', $value)) . str_repeat(PHP_EOL,2);
         }
 
         // PROPERTIES

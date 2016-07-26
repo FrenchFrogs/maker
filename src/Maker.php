@@ -367,7 +367,7 @@ class Maker
      * @param null $type
      * @return Property
      */
-    public function addProperty($name, $default = null, $type = null)
+    public function addProperty($name, $default = Maker::NO_VALUE, $type = null)
     {
         $property = $name instanceof Property ?  $name : new Property($name, $default, $type);
 
