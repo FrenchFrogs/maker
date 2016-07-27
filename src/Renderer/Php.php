@@ -67,7 +67,11 @@ class Php extends Renderer
 
         // CONSTANT
         foreach ($maker->getConstants() as $name => $value) {
-            $content .= sprintf('const %s = %s', $name, $this->render('value', $value)) . str_repeat(PHP_EOL,2);
+            $content .= sprintf('const %s = %s;', $name, $this->render('value', $value)) . PHP_EOL;
+        }
+
+        if (!empty($name)) {
+            $content .= str_repeat(PHP_EOL,2);
         }
 
         // PROPERTIES
@@ -103,8 +107,8 @@ class Php extends Renderer
         // NAMESPACE
         if ($maker->hasNamespace()) {
             $content .= 'namespace ' . $maker->getNamespace() . ';' . PHP_EOL;
-            $content .= str_repeat(PHP_EOL, 2);
         }
+        $content .= str_repeat(PHP_EOL, 2);
 
         // ALIASES
         if ($maker->hasAliases()) {
@@ -125,7 +129,7 @@ class Php extends Renderer
         $content .= 'class ' . $reflection->getShortName();
 
         // PARENT
-        if ($parent =  $reflection->getParentClass()->getName()) {
+        if ($parent = $maker->getParent()) {
             $content .= ' extends ' . $maker->findAliasName($parent);
         }
 

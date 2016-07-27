@@ -11,6 +11,13 @@ class Maker
     const NO_VALUE = '__null__';
 
     /**
+     * Fichier de sortie
+     *
+     * @var
+     */
+    protected $filename;
+
+    /**
      * Properties to add or modify
      *
      * @var array
@@ -190,7 +197,6 @@ class Maker
      */
     public function findAliasName($class)
     {
-
         // initialisation
         $name = $class;
 
@@ -201,11 +207,11 @@ class Maker
 
         // cas des alias
         foreach ($this->getAliases() as $alias => $c) {
-            $a = preg_replace('#^'.str_replace('\\', '\\\\', $c).'\\\\#', $alias, $name);
+            $a = preg_replace('#^'.str_replace('\\', '\\\\', $c).'#', $alias, $name);
             $name = strlen($a) < strlen($name) ? $a : $name;
         }
 
-        return $name;
+        return $name == $class ?  '\\' . $class : $name;
     }
 
     /**
@@ -288,6 +294,28 @@ class Maker
 
 
     /**
+     * Setter for $filename
+     *
+     * @param $filename
+     * @return $this
+     */
+    public function setFilename($filename)
+    {
+        $this->filename = strval($filename);
+        return $this;
+    }
+
+    /**
+     * Getter for $filename
+     *
+     * @return mixed
+     */
+    public function getFilename()
+    {
+        return $this->filename;
+    }
+
+    /**
      * Analyse $class for extract self content
      *
      * @return $this
@@ -309,6 +337,7 @@ class Maker
 
         // ALIAS
         $file = $reflection->getFileName();
+        $this->setFilename($file);
 
         // lecture du fichier
         if (file_exists($file)) {
@@ -329,7 +358,7 @@ class Maker
         // PARENT CLASS
         $parent = $reflection->getParentClass();
         if (!empty($parent)) {
-            $this->setParent($parent);
+            $this->setParent($parent->getName());
         }
 
         // CONSTANT
@@ -434,6 +463,24 @@ class Maker
 
 
     /**
+     * Creation d'un fichier pour inititaliser une class
+     *
+     * @param $class
+     * @param $file
+     */
+    static public function init($class, $file)
+    {
+
+        if (file_exists($file)) {
+            exc('Impossible de créer la classe "'.$class.'", Le fichier existe deja : ' . $file );
+        }
+
+        file_put_contents($file, sprintf('<?php class %s {}', $class));
+        require_once $file;
+        return static::load($class);
+    }
+
+    /**
      * Render!
      *
      * @return mixed|string
@@ -457,7 +504,7 @@ class Maker
      */
     public function write()
     {
-        file_put_contents($this->getClass()->getFileName(), '<?php ' . $this->render(), LOCK_EX);
+        file_put_contents($this->getFilename(), '<?php ' . $this->render(), LOCK_EX);
         return $this;
     }
 }
