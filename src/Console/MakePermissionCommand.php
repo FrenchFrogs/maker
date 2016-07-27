@@ -65,7 +65,8 @@ class MakePermissionCommand extends Command
         $ruler = Maker::load($rulerClass);
 
         // NOM
-        $constant = $this->ask('Nom de la constante?', 'PERMISSION_' . strtoupper($permission));
+        $nice_permission = str_replace('.', '_', $permission);
+        $constant = $this->ask('Nom de la constante?', 'PERMISSION_' . strtoupper($nice_permission));
         $constant = strtoupper($constant);
 
         // ANALYSE DES CONSTANTES
@@ -96,11 +97,13 @@ class MakePermissionCommand extends Command
         $ruler->addConstant($constant, $permission);
         $ruler->write();
 
-        $label = $this->ask('Quelle est le libellé de cette Permission?', ucfirst($permission));
+        $label = strrpos($permission, '.');
+        $label = $label ? substr($permission, $label + 1) : $permission;
+        $label = $this->ask('Quelle est le libellé de cette Permission?', ucfirst($label));
 
         // Creation de la migration
         $this->info('Creation de la migration');
-        $filename = 'create_permission_' . $permission . '_' . \uuid('hex') ;
+        $filename = 'create_permission_' . $nice_permission . '_' . \uuid('hex') ;
         $filepath = storage_path('tmp/') . $filename;
         $filesystem->delete($filepath);
 
@@ -124,11 +127,6 @@ class MakePermissionCommand extends Command
         $filesystem->delete($filepath);
         $this->info('Migration created successfully!');
         $composer->dumpAutoloads();
-
-        // LANCER MIGRATION
-        if($this->confirm('Voulez vous lancer la migration?')) {
-            $this->call('migrate');
-        }
 
         $this->info('Have fun!!');
     }
